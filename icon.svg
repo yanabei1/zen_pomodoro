@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- 应用图标：直接复用界面里的圆环母题 -->
+  <rect width="512" height="512" rx="112" fill="#F5F1E8"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#E2DACA" stroke-width="26"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#A8442C" stroke-width="26"
+          stroke-dasharray="942.5" stroke-dashoffset="236"
+          transform="rotate(-90 256 256)"/>
+</svg>

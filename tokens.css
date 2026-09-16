@@ -1,0 +1,188 @@
+/* ============================================================
+   禅意番茄钟 · Design Tokens  v2
+   含浅色 / 深色主题、语言切换、时钟模式
+   从 pencil-new.pen 导出，可直接用于 PWA
+   ============================================================ */
+
+/* ---------- 浅色（默认）· 宣纸与朱砂 ---------- */
+:root,
+[data-theme="light"] {
+  --zen-bg: #f5f1e8;
+  --zen-surface: #fcfaf5;
+  --zen-track: #ebe4d6;
+  --zen-line: #e2daca;
+  --zen-knob: #ffffff;
+
+  --zen-ink: #2b2723;        /* 墨 · 标题与数值 */
+  --zen-ink-soft: #7b746a;   /* 淡墨 · 说明文字 */
+  --zen-ink-faint: #aca496;  /* 极淡墨 · 仅装饰，约 2.2:1 不可承载信息 */
+
+  --zen-accent: #a8442c;     /* 朱砂 · 当前状态 */
+  --zen-accent-soft: #f0e3da;
+  --zen-accent-faint: #a8442c33;
+
+  color-scheme: light;
+}
+
+/* ---------- 深色 · 夜纸 ---------- */
+[data-theme="dark"] {
+  --zen-bg: #191714;
+  --zen-surface: #221f1a;
+  --zen-track: #2c2822;
+  --zen-line: #332e27;
+  --zen-knob: #e8e1d5;
+
+  --zen-ink: #e8e1d5;
+  --zen-ink-soft: #9a9186;
+  --zen-ink-faint: #6a635a;
+
+  --zen-accent: #c25b3e;     /* 深色底上提亮的朱砂 */
+  --zen-accent-soft: #3a241c;
+  --zen-accent-faint: #c25b3e3d;
+
+  color-scheme: dark;
+}
+
+/* 跟随系统（PWA 推荐默认值） */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --zen-bg: #191714;
+    --zen-surface: #221f1a;
+    --zen-track: #2c2822;
+    --zen-line: #332e27;
+    --zen-knob: #e8e1d5;
+    --zen-ink: #e8e1d5;
+    --zen-ink-soft: #9a9186;
+    --zen-ink-faint: #6a635a;
+    --zen-accent: #c25b3e;
+    --zen-accent-soft: #3a241c;
+    --zen-accent-faint: #c25b3e3d;
+    color-scheme: dark;
+  }
+}
+
+/* ============================================================
+   字体 · 全本地，零网络依赖
+   ------------------------------------------------------------
+   思源宋体 Source Han Serif SC，静态 CFF，无变量轴。
+   已做子集化：只保留本应用会显示的字（约 700 个），
+   两个文件合计约 520KB，而不是完整字库的 47MB。
+   ⚠ 改了界面文案后必须重新跑 subset-fonts.py，
+     否则新增的字没有字形，会掉回系统宋体。
+   ⚠ 不要再引入 Google Fonts：那会让字体依赖网络，
+     且 PWA 离线时首屏会掉回系统宋体。
+   font-display: swap  —— 字体没就绪时先用系统宋体占位，
+   绝不出现空白文字。
+   ============================================================ */
+@font-face {
+  font-family: "Zen Serif SC";
+  src: url("fonts/SourceHanSerifSC-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Zen Serif SC";
+  src: url("fonts/SourceHanSerifSC-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------- 字体 ---------- */
+:root {
+  /* 思源宋体（本地）→ 系统宋体兜底 */
+  --zen-serif-cn: "Zen Serif SC", "Source Han Serif SC", "Noto Serif SC",
+                  "Songti SC", "SimSun", serif;
+  --zen-serif-en: "Zen Serif SC", "Noto Serif", Georgia,
+                  "Times New Roman", serif;
+  /* 语言切换只换字体，不换结构 ↓ */
+  --zen-serif: var(--zen-serif-cn);
+}
+[lang="en"] { --zen-serif: var(--zen-serif-en); }
+
+/* ---------- 排版层级 ---------- */
+:root {
+  --font-title: 1.375rem;  --weight-title: 700;  --ls-title: 0.25rem;
+  --font-dial: 3.375rem;   --weight-dial: 500;
+  --font-hero: 2.5rem;   --weight-hero: 500;
+  --font-now: 1.375rem;    --ls-now: 0.375rem;        /* 时钟模式的当前时间 */
+  --font-body: 0.9375rem;   --weight-body: 400;
+  --font-value: 0.9375rem;  --weight-value: 700;
+  --font-nav: 0.8125rem;    --ls-nav: 0.1875rem;
+  --font-micro: 0.6875rem;  --ls-micro: 0.25rem;
+}
+
+/* 本地只装了 400 / 700 两个字重：500 的档位统一按 400 渲染，
+   避免浏览器对缺失字重做「伪加粗」，笔画会发糊。
+   若日后把 Medium 也放进 fonts/，删掉这两行即可恢复。 */
+:root { --weight-dial: 400; --weight-hero: 400; }
+
+/* ---------- 间距与尺寸 ---------- */
+:root {
+  --screen-w: 24.375rem;
+  --pad-x: 1.875rem;
+  --gap-section: 2.125rem;
+  --gap-group: 1.75rem;
+  --row-h: 3.125rem;
+
+  --dial-size: 15.75rem;
+  --dial-stroke: 3px;   /* SVG 用户单位，不参与 rem 缩放，否则会被 viewBox 裁掉 */
+  --bar-w: 0.5rem;
+  --toggle-w: 2.875rem; --toggle-h: 1.75rem; --knob: 1.375rem;
+  --stepper-btn: 1.875rem;
+  --play-btn: 4.75rem;
+  --hairline: 1px solid var(--zen-line);
+}
+
+/* ============================================================
+   PWA 实现要点
+   ------------------------------------------------------------
+   1) 圆环进度 = SVG
+      r = (252 - 3) / 2 = 124.5 ;  C = 2πr = 782.2
+      <circle r="124.5" stroke-dasharray="782.2"
+              stroke-dashoffset={782.2 * (1 - progress)}
+              transform="rotate(-90)" stroke-linecap="butt" />
+      ⚠ svg 内部的 stroke-width 是【用户单位】而非屏幕像素。
+        写成 rem 会变成 0.1875 × 根字号 ≈ 6.5 → 圆环外沿超出 viewBox
+        （126 + 124.5 + 3.25 = 253.75 > 252），上下左右四个正方向被削平。
+        必须用无单位的 3 或 3px。
+      注意：禅意版是平头结尾，不是圆头。
+
+   2) 倒计时用绝对时间，不要累加
+      remaining = endTimestamp - Date.now()
+      setInterval 会漂移，25 分钟下来差好几秒；
+      回到前台时（visibilitychange）重算一次。
+
+   3) 主题三态
+      用户可选 浅色 / 深色，默认跟随系统：
+      root.dataset.theme = saved ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      并监听 matchMedia 变化实时切换。
+
+   4) 语言切换
+      只改 <html lang> 与文案表，字体由 --zen-serif 自动跟随，
+      布局结构完全不变 —— 这就是「之后换个字体的事情」。
+
+   5) 时钟模式（只显示时钟与当前时间）
+      切换后隐藏 status bar / 模式切换 / 控件 / 导航，
+      页面仅保留「当前时间」+「圆环」两个元素，居中排列。
+      退出方式：点击任意位置（无需可见按钮，保持绝对克制）。
+
+   6) 屏幕常亮（番茄钟刚需）
+      const lock = await navigator.wakeLock.request("screen");
+      切到后台会释放，需在 visibilitychange 时重新申请。
+
+   7) 提醒
+      Notification 需要在用户点击「开始」时请求权限，
+      否则 iOS PWA 会拒绝。音频可用 WebAudio 合成一声磬音，
+      比加载音频文件更轻。
+
+   8) 安全区
+      设计稿里的 3.875rem 状态栏是 iOS 外壳，真机上删掉，改用
+      padding-top: env(safe-area-inset-top, 0rem);
+      底部导航同理用 env(safe-area-inset-bottom)。
+
+   9) 中文字体子集化
+      Noto Serif SC 全量 10MB+，PWA 首屏必须子集化，
+      按 unicode-range 切分或只打包用到的字符。
+   ============================================================ */

@@ -1,0 +1,741 @@
+/* ============================================================
+   禅意番茄钟 · 样式
+   尺寸全部来自 pencil-new.pen 的画布标注
+   ============================================================ */
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body { margin: 0; padding: 0; }
+
+/* 全站等比缩放：
+   设计稿基准是 390×844，让 1rem 跟随窗口变化，其余尺寸全部用 rem。
+   3.6vw / 2.0vh 是「刚好填满」的 92%：留出约 4% 的边距，
+   否则界面紧贴窗口四边，看起来像是被裁掉了外框。 */
+html {
+  font-size: clamp(12px, min(3.6vw, 2vh), 38px);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--zen-bg);
+  color: var(--zen-ink);
+  font-family: var(--zen-serif);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+button {
+  font-family: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* ---------- 图标 ---------- */
+.i {
+  width: 1.25rem; height: 1.25rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  display: block;
+}
+.i-solid { fill: currentColor; stroke: none; }
+
+/* ---------- 壳 ---------- */
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  max-width: 25.5rem;   /* ≈ 设计稿 390px + 少量余量 */
+  margin: 0 auto;
+  background: var(--zen-bg);
+}
+
+.screen {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--gap-section);
+  padding: calc(env(safe-area-inset-top, 0rem) + 1.125rem) var(--pad-x) 2.5rem;
+}
+
+body[data-view="timer"]    #s-timer,
+body[data-view="stats"]    #s-stats,
+body[data-view="settings"] #s-settings,
+body[data-view="clock"]    #s-clock { display: flex; }
+
+body[data-view="settings"] #s-settings { gap: var(--gap-group); padding-bottom: 2.125rem; }
+body[data-view="settings"] .nav,
+body[data-view="clock"]    .nav { display: none; }
+
+/* 屏高多出来的空间平均分到上下两侧：
+   用 auto margin 而不是 justify-content:center，
+   这样内容超过一屏时也不会把顶部裁掉。 */
+#s-timer > :first-child,
+#s-stats > :first-child { margin-top: auto; }
+#s-timer > :last-child,
+#s-stats > :last-child { margin-bottom: auto; }
+
+/* ---------- 页头 ---------- */
+.head { display: flex; align-items: center; justify-content: space-between; }
+
+.head-spacer { width: 2.5rem; height: 2.5rem; flex: none; }
+
+.head-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5625rem;
+}
+.head-center.grow { flex: 1; }
+
+.head-date {
+  margin: 0;
+  font-size: 0.6875rem;
+  letter-spacing: 0.1875rem;
+  color: var(--zen-ink-faint);
+}
+html[lang^="zh"] .head-date { letter-spacing: 0.1875rem; }
+html[lang="en"]  .head-date { letter-spacing: 0.125rem; }
+
+.head-title {
+  margin: 0;
+  font-size: var(--font-title);
+  font-weight: var(--weight-title);
+  letter-spacing: 0.25rem;
+  margin-left: 0.125rem;          /* 抵消末字后的字距，让视觉真正居中 */
+  color: var(--zen-ink);
+  white-space: nowrap;
+}
+html[lang^="zh"] .head-title { letter-spacing: 0.5rem; margin-left: 0.25rem; }
+
+.head-today {
+  margin: 0;
+  font-size: 0.6875rem;
+  letter-spacing: 0.125rem;
+  color: var(--zen-ink-soft);
+}
+
+.icon-btn {
+  width: 2.5rem; height: 2.5rem;
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: var(--zen-ink-soft);
+}
+
+/* ---------- 模式切换 ---------- */
+.modes {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.875rem;
+}
+html[lang="en"] .modes { gap: 1.625rem; }
+
+.mode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5625rem;
+  font-size: 0.9375rem;
+  letter-spacing: 0.125rem;
+  color: var(--zen-ink-faint);
+  transition: color .38s, opacity .7s;
+}
+html[lang="en"] .mode { letter-spacing: 1px; }
+
+.mode .dot {
+  width: 0.25rem; height: 0.25rem;
+  border-radius: 50%;
+  background: var(--zen-accent);
+  opacity: 0;
+  transition: opacity .38s;
+}
+.mode.is-active { color: var(--zen-accent); font-weight: 700; }
+.mode.is-active .dot { opacity: 1; }
+
+/* 计时中：不可点，且把非当前项压下去 —— 读起来是一行状态，而不是一组选项 */
+.modes.is-locked { pointer-events: none; }   /* 双保险：不依赖 disabled 属性 */
+.modes.is-locked .mode { cursor: default; }
+.modes.is-locked .mode:not(.is-active) { opacity: 0.38; }
+
+/* ---------- 圆环 ---------- */
+.dial-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---------- 禅意模式：无终点，所以没有模式可选、没有轮次 ---------- */
+.start-row {
+  display: none;
+  height: 1.25rem;          /* 与 .rounds 等高，切换时占位一致 */
+  align-items: center;
+  justify-content: center;
+}
+#s-timer.is-zen .start-row { display: flex; }
+
+/* 模式行【保留占位】只是藏起来 —— 一旦抽掉，下面的表盘与控件会整体位移，
+   交叉淡化挡不住位置变化，两个残影错位地叠在一起就是「生硬」的来源。 */
+#s-timer.is-zen .modes { visibility: hidden; }
+#s-timer.is-zen .rounds,
+#s-timer.is-zen .ctrl { display: none; }
+.start-row span { font-size: 0.75rem; letter-spacing: 0.0625rem; color: var(--zen-ink-soft); }
+
+.dial {
+  position: relative;
+  width: var(--dial-size);
+  height: var(--dial-size);
+  cursor: pointer;
+}
+
+/* 点数字调时长、点圆环进时钟模式 —— 两个目标分得很清楚；禅意模式下也一样可调 */
+#s-timer.is-idle .dial-time,
+#s-timer.is-idle .dial-state { cursor: pointer; }
+#s-timer.is-idle .dial-state { text-decoration: underline; text-underline-offset: 0.35em; text-decoration-color: var(--zen-line); }
+
+.dial-svg {
+  display: block;
+  width: 100%; height: 100%;
+  transform: rotate(-90deg);      /* 从 12 点方向起笔 */
+  overflow: visible;              /* 描边正好落在 viewBox 边界上，不让它被裁 */
+}
+
+.dial-track { fill: none; stroke: var(--zen-line); stroke-width: var(--dial-stroke); }
+
+.dial-progress {
+  fill: none;
+  stroke: var(--zen-accent);
+  stroke-width: var(--dial-stroke);
+  stroke-dasharray: 782.2;                   /* 2πr, r = 124.5 */
+  stroke-linecap: butt;
+  transition: stroke-dashoffset .12s linear, stroke .55s;
+}
+
+.dial-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8125rem;
+  pointer-events: none;   /* 只在数字上响应，其余位置让给圆环（时钟模式） */
+}
+.dial-time, .dial-state, .dial-picker { pointer-events: auto; }
+
+/* 点数字 → 就地展开常用值，和设置页里是同一套预设 */
+.dial-picker { display: none; align-items: center; gap: 1rem; }
+.dial.is-picking .dial-time,
+.dial.is-picking .dial-state { display: none; }
+.dial.is-picking .dial-picker { display: flex; animation: vtFadeIn 0.55s ease both; }
+
+.dial-picker button {
+  font-size: 1.375rem;
+  color: var(--zen-ink-faint);
+  font-variant-numeric: tabular-nums;
+  transition: color 0.38s;
+}
+.dial-picker button.is-on { color: var(--zen-ink); font-weight: 700; }
+.dial-picker button:active { color: var(--zen-accent); }
+
+.dial-time {
+  /* 盒子尺寸固定，不随内容变 —— 否则视图转场会为该「组」补间尺寸，
+     切禅意时会看到 ∞ 的旧快照被拉伸到数字盒子的大小，像放大了一下。
+     顺带好处：数字从 24:36 跳到 1:23:45 时也不会推动布局。 */
+  width: 14rem;
+  height: 4.5rem;
+  line-height: 4.5rem;
+  text-align: center;
+  font-size: var(--font-dial);
+  font-weight: var(--weight-dial);
+  color: var(--zen-ink);
+  font-variant-numeric: tabular-nums;
+  transition: color .55s;
+}
+
+/* ∞ 的字面高度只有数字的一半不到，同字号下明显偏小；只改字号，盒子尺寸不变 */
+.dial-time.is-infinite { font-size: 4.5rem; }
+
+.dial-state {
+  /* 同样固定盒子，避免转场补间尺寸（∞ / 00:00 / 长休息中 宽度各不相同） */
+  width: 9rem;
+  height: 1.25rem;
+  line-height: 1.25rem;
+  text-align: center;
+  font-size: 0.6875rem;
+  letter-spacing: 0.25rem;
+  color: var(--zen-ink-faint);
+  transition: color 0.55s, font-size 0.55s;
+}
+
+/* 禅意未开始时，这里放的是「现在的时刻」而不是状态词 */
+.dial-state.is-time {
+  font-size: 0.875rem;
+  letter-spacing: 0.125rem;
+  color: var(--zen-ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+html[lang="en"] .dial-state { letter-spacing: 0.1875rem; }
+
+/* 暂停状态：环与数字一起褪色 */
+.is-paused .dial-progress { stroke: var(--zen-ink-faint); }
+.is-paused .dial-time { color: var(--zen-ink-soft); }
+
+/* ---------- 轮次 ---------- */
+.rounds {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  height: 1.25rem;          /* 固定高度：与 .start-row 一致，切换时占位不变 */
+}
+.round-dots { display: flex; align-items: center; gap: 0.75rem; }
+
+.round-dot {
+  width: 0.3125rem; height: 0.3125rem;
+  border-radius: 50%;
+  background: var(--zen-line);
+  transition: background .55s;
+}
+.round-dot.is-done { background: var(--zen-accent); }
+
+.rounds-label { font-size: 0.75rem; letter-spacing: 1px; color: var(--zen-ink-soft); }
+
+/* ---------- 控件 ---------- */
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.875rem;
+}
+
+.ctrl {
+  width: 3rem; height: 3rem;      /* 设计稿 2.5rem，放大到 48 满足最小点击热区 */
+  display: grid;
+  place-items: center;
+  color: var(--zen-ink-soft);
+  transition: color .38s;
+}
+.ctrl:active { color: var(--zen-ink); }
+
+.ctrl-main {
+  width: var(--play-btn); height: var(--play-btn);
+  border-radius: 50%;
+  border: 1px solid var(--zen-accent);
+  display: grid;
+  place-items: center;
+  color: var(--zen-accent);
+  transition: background .38s, color .38s;
+}
+.ctrl-main .i { width: 1.5rem; height: 1.5rem; }
+.ctrl-main .ic-pause { display: none; }
+.ctrl-main.is-running .ic-play { display: none; }
+.ctrl-main.is-running .ic-pause { display: block; }
+.ctrl-main:active { background: var(--zen-accent-soft); }
+
+/* ---------- 页脚 ---------- */
+.zen-line {
+  margin: 0;
+  text-align: center;
+  font-size: 0.75rem;
+  letter-spacing: 0.1875rem;
+  color: var(--zen-ink-soft);
+  transition: opacity 0.7s;
+}
+body.is-toasting .zen-line { opacity: 0; }   /* 提示出现时，让位给提示语 */
+html[lang="en"] .zen-line { letter-spacing: 1px; }
+
+.zen-line.is-action { color: var(--zen-accent); font-size: 0.8125rem; }
+
+/* ---------- 导航 ---------- */
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3.625rem;
+  padding: 1.125rem 0 calc(env(safe-area-inset-bottom, 0rem) + 1.375rem);
+  border-top: 1px solid var(--zen-line);
+}
+.nav button {
+  font-size: var(--font-nav);
+  letter-spacing: 0.1875rem;
+  color: var(--zen-ink-soft);
+  transition: color .38s;
+}
+.nav button.is-active { color: var(--zen-accent); font-weight: 700; }
+
+/* ---------- 统计 ---------- */
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8125rem;
+}
+.hero-value {
+  font-size: var(--font-hero);
+  font-weight: var(--weight-hero);
+  color: var(--zen-ink);
+  font-variant-numeric: tabular-nums;
+}
+.hero-label { font-size: 0.6875rem; letter-spacing: 0.25rem; color: var(--zen-ink-soft); }
+html[lang="en"] .hero-label { letter-spacing: 0.1875rem; }
+
+.chart { display: flex; align-items: flex-end; gap: 0.375rem; }
+
+.chart-empty {
+  flex: 1;
+  margin: 0;
+  padding: 3.5rem 0;
+  text-align: center;
+  font-size: 0.8125rem;
+  letter-spacing: 0.125rem;
+  color: var(--zen-ink-faint);
+}
+html[lang="en"] .chart-empty { letter-spacing: 1px; }
+.chart .col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+.chart .bar-area {
+  width: 100%; height: 8.25rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.chart .bar {
+  width: var(--bar-w);
+  border-radius: 0.25rem;
+  background: var(--zen-accent-faint);
+  min-height: 0.125rem;
+  transition: height .75s ease;
+}
+.chart .bar.is-today { background: var(--zen-accent); }
+.chart .day { font-size: 0.6875rem; color: var(--zen-ink-soft); }
+.chart .day.is-today { color: var(--zen-accent); font-weight: 700; }
+
+.metrics-wrap { display: flex; flex-direction: column; gap: 1.5rem; }
+
+.sep { height: 1px; background: var(--zen-line); }
+
+.metrics { display: flex; flex-direction: column; }
+.metric {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--row-h);
+}
+.metric-label { font-size: 0.9375rem; color: var(--zen-ink-soft); }
+.metric-value { font-size: 0.9375rem; font-weight: 700; color: var(--zen-ink); }
+
+/* ---------- 设置 ---------- */
+.group { display: flex; flex-direction: column; }
+
+.group-head {
+  margin: 0;
+  padding-bottom: 0.625rem;
+  font-size: 0.6875rem;
+  letter-spacing: 0.25rem;
+  color: var(--zen-ink-soft);
+}
+html[lang="en"] .group-head { letter-spacing: 0.1875rem; }
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--row-h);
+}
+.row-label { font-size: 0.9375rem; color: var(--zen-ink); }
+.row-value { font-size: 0.9375rem; color: var(--zen-ink-soft); }
+.row-end { display: flex; align-items: center; gap: 1rem; }
+
+.link-btn {
+  font-size: 0.875rem;
+  color: var(--zen-ink-soft);
+  transition: color 0.38s;
+}
+.link-btn:active { color: var(--zen-ink); }
+.link-btn.is-danger { color: var(--zen-accent); }
+
+/* 行下方的补充说明：比正文小一档、淡一档，只做解释不抢注意力 */
+.row-note {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.65;
+  color: var(--zen-ink-soft);
+  max-width: 22rem;
+}
+
+/* 隐藏但可被辅助技术读到（import 用的 file input） */
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 点数值 → 就地展开常用值，代替点十几次加减 */
+.row.is-picking > .stepper { display: none; }
+.row.is-picking > .presets { display: flex; }
+
+.presets { display: none; align-items: center; gap: 1.25rem; }
+.presets button {
+  font-size: 1rem;
+  color: var(--zen-ink-faint);
+  font-variant-numeric: tabular-nums;
+  transition: color 0.38s;
+}
+.presets button.is-on { color: var(--zen-ink); font-weight: 700; }
+.presets button:active { color: var(--zen-accent); }
+
+.stepper { display: flex; align-items: center; gap: 0.625rem; }
+
+.step {
+  width: var(--stepper-btn); height: var(--stepper-btn);
+  border-radius: 50%;
+  border: 1px solid var(--zen-line);
+  display: grid;
+  place-items: center;
+  color: var(--zen-ink-soft);
+  transition: border-color .38s, color .38s;
+}
+.step .i { width: 0.875rem; height: 0.875rem; }
+.step:active { border-color: var(--zen-ink-faint); color: var(--zen-ink); }
+.step:disabled { opacity: .35; }
+
+.value {
+  width: 4.25rem;
+  text-align: center;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--zen-ink);
+  font-variant-numeric: tabular-nums;
+}
+html[lang="en"] .value { width: 4.625rem; }
+
+.toggle {
+  position: relative;
+  width: var(--toggle-w); height: var(--toggle-h);
+  border-radius: 0.875rem;
+  background: var(--zen-track);
+  transition: background .42s;
+}
+.toggle::after {
+  content: "";
+  position: absolute;
+  top: 0.1875rem; left: 0.1875rem;
+  width: var(--knob); height: var(--knob);
+  border-radius: 50%;
+  background: var(--zen-knob);
+  box-shadow: 0 1px 0.1875rem rgba(43, 39, 35, .22);
+  transition: left .42s;
+}
+.toggle.is-on { background: var(--zen-accent); }
+.toggle.is-on::after { left: 1.3125rem; }
+
+.switch2 { display: flex; align-items: center; gap: 0.5rem; }
+.switch2 button {
+  font-size: 0.9375rem;
+  color: var(--zen-ink-faint);
+  transition: color .38s;
+}
+.switch2 button.is-on { color: var(--zen-ink); font-weight: 700; }
+.switch2 .dotsep {
+  width: 0.1875rem; height: 0.1875rem;
+  border-radius: 50%;
+  background: var(--zen-line);
+}
+
+.reset-all {
+  text-align: center;
+  font-size: 0.875rem;
+  letter-spacing: 1px;
+  color: var(--zen-accent);
+  padding: 0.5rem;
+  margin: 0 auto;
+}
+
+/* ---------- 时钟模式 ---------- */
+#s-clock {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2.75rem;
+  padding: 0 var(--pad-x);
+  cursor: pointer;
+}
+.clock-now {
+  margin: 0;
+  font-size: var(--font-now);
+  letter-spacing: 0.375rem;
+  color: var(--zen-ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 秒：小一号，但颜色保持可读（不要用 ink-faint，那段在浅底上只有 2.2:1）
+   计时进行中折叠隐藏 —— 与倒计时同时跳动会显得杂乱 */
+.clock-sec {
+  display: inline-block;
+  font-size: 0.58em;
+  letter-spacing: 0.12em;
+  margin-left: 0.5em;
+  color: var(--zen-ink-soft);
+  max-width: 3em;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: opacity 0.7s ease, max-width 0.7s ease, margin-left 0.7s ease;
+}
+body.is-timing .clock-sec { opacity: 0; max-width: 0; margin-left: 0; }
+
+/* ---------- 正向提示 ---------- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 5.5rem);   /* 停在导航上方 */
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0 2rem;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.95s ease;
+}
+.toast.is-on { opacity: 1; }
+
+.toast-main {
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: 0.5rem;
+  margin-left: 0.5rem;              /* 抵消末字字距 */
+  color: var(--zen-accent);
+  white-space: nowrap;
+}
+html[lang="en"] .toast-main { font-size: 1.25rem; letter-spacing: 0.25rem; margin-left: 0.25rem; }
+
+.toast-sub {
+  font-size: 0.75rem;
+  letter-spacing: 0.125rem;
+  color: var(--zen-ink-soft);
+}
+
+.stat-note {
+  margin: 0;
+  text-align: center;
+  font-size: 0.75rem;
+  letter-spacing: 0.125rem;
+  color: var(--zen-ink-faint);
+}
+
+/* ============================================================
+   宽屏（≥ 896px）：把竖排的移动布局改成横向两栏
+   竖屏设计在横屏窗口里必然左右大畁空白，只能靠改布局用掉横向空间
+   ============================================================ */
+@media (min-width: 56rem) and (min-aspect-ratio: 1/1) {
+  html { font-size: clamp(16px, 1.9vw, 26px); }
+  .app { max-width: none; }
+  :root { --dial-size: 19rem; --font-dial: 4.25rem; }
+
+  /* ---- 计时：左表盘 / 右信息 ---- */
+  body[data-view="timer"] #s-timer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-content: center;
+    align-items: center;
+    justify-items: center;
+    gap: 2rem 4rem;
+    padding: 2.5rem 3.5rem 3rem;
+  }
+  #s-timer > * { margin: 0; }
+  #s-timer .head { grid-column: 1 / -1; width: 100%; max-width: 46rem; }
+  #s-timer .dial-wrap { grid-column: 1; grid-row: 2 / span 4; }
+  #s-timer .modes { grid-column: 2; grid-row: 2; }
+  #s-timer .rounds { grid-column: 2; grid-row: 3; }
+  #s-timer .controls { grid-column: 2; grid-row: 4; }
+  #s-timer .zen-line { grid-column: 2; grid-row: 5; }
+
+  /* ---- 统计：左侧主数字 + 指标，右侧周图 ---- */
+  body[data-view="stats"] #s-stats {
+    display: grid;
+    grid-template-columns: minmax(0, 22rem) minmax(0, 1fr);
+    grid-template-areas:
+      "head head"
+      "hero chart"
+      "metrics chart";
+    align-content: center;
+    gap: 2.5rem 4rem;
+    padding: 2.5rem 3.5rem 3rem;
+    max-width: 72rem;
+    margin-inline: auto;
+  }
+  #s-stats > * { margin: 0; }
+  #s-stats .head { grid-area: head; width: 100%; }
+  #s-stats .hero { grid-area: hero; align-self: end; }
+  #s-stats .chart { grid-area: chart; align-self: center; width: 100%; }
+  #s-stats .metrics-wrap { grid-area: metrics; align-self: start; }
+
+  /* ---- 设置：两栏流式排布 ---- */
+  body[data-view="settings"] #s-settings {
+    display: block;
+    column-count: 2;
+    column-gap: 4rem;
+    max-width: 72rem;
+    margin-inline: auto;
+    padding: 2.5rem 3.5rem 3rem;
+  }
+  #s-settings .head { column-span: all; margin-bottom: 2rem; }
+  #s-settings .group { break-inside: avoid; margin-bottom: 1.75rem; }
+  #s-settings .reset-all { break-inside: avoid; display: block; }
+}
+
+/* ---------- 视图切换：一律只做渐入渐出 ---------- */
+::view-transition-old(root) { animation: vtFadeOut 0.5s ease both; }
+::view-transition-new(root) { animation: vtFadeIn 0.5s ease both; }
+@keyframes vtFadeOut { to { opacity: 0; } }
+@keyframes vtFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* 表盘里那两行单独命名，可从根快照里「抠」出来自己动。
+   （同一时刻只能有一个元素持有某个 name，所以按当前视图二选一） */
+body[data-view="timer"] #time,
+body[data-view="clock"] #timeClock { view-transition-name: dial-main; }
+body[data-view="timer"] #dialState,
+body[data-view="clock"] #dialStateClock { view-transition-name: dial-sub; }
+
+/* 按下开始：只让表盘里那两行交叉淡化，整页不动。
+   按一个按钮却整屏闪一下，会把按下的手感吞掉。 */
+html[data-vt="zen-start"]::view-transition-old(root),
+html[data-vt="zen-start"]::view-transition-new(root) { animation: none; }
+html[data-vt="zen-start"]::view-transition-old(dial-main),
+html[data-vt="zen-start"]::view-transition-new(dial-main),
+html[data-vt="zen-start"]::view-transition-old(dial-sub),
+html[data-vt="zen-start"]::view-transition-new(dial-sub) { animation-duration: 0.5s; }
+
+/* 不支持 View Transitions 的浏览器：同样用淡入兜底 */
+.no-vt .screen { animation: vtFadeIn 0.5s ease both; }
+
+
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation: none !important; }
+}

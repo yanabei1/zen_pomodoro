@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>禅 · 番茄钟</title>
+<meta name="description" content="一个安静的番茄钟">
+<meta name="theme-color" content="#F5F1E8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="禅钟">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<!-- 字体已全部本地化（fonts/ + @font-face，见 tokens.css）。
+     不再引入 Google Fonts：那样首屏依赖网络，断网会掉回系统宋体。 -->
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body data-view="timer">
+
+<svg style="display:none" aria-hidden="true">
+  <symbol id="i-settings" viewBox="0 0 24 24"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></symbol>
+  <symbol id="i-reset" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v5h-5"/></symbol>
+  <symbol id="i-skip" viewBox="0 0 24 24"><path d="M5 5.5v13l9.5-6.5z"/><rect x="16.4" y="5.5" width="2.6" height="13" rx="1.1"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8.5 5.6v12.8l10.4-6.4z"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="7.2" y="5" width="3.6" height="14" rx="1.4"/><rect x="13.2" y="5" width="3.6" height="14" rx="1.4"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></symbol>
+</svg>
+
+<div class="app">
+
+  <!-- ══════════ 计时 ══════════ -->
+  <section class="screen" id="s-timer" data-screen>
+    <header class="head">
+      <span class="head-spacer"></span>
+      <div class="head-center">
+        <p class="head-date" id="timerDate">—</p>
+        <h1 class="head-title" id="screenTitle">专注</h1>
+        <p class="head-today" id="todayLine">—</p>
+      </div>
+      <button class="icon-btn" data-go="settings" aria-label="设置">
+        <svg class="i"><use href="#i-settings"/></svg>
+      </button>
+    </header>
+
+    <div class="modes" id="modes">
+      <button class="mode is-active" data-mode="focus"><span data-i18n="modeFocus">专注</span><span class="dot"></span></button>
+      <button class="mode" data-mode="short"><span data-i18n="modeShort">短休息</span><span class="dot"></span></button>
+      <button class="mode" data-mode="long"><span data-i18n="modeLong">长休息</span><span class="dot"></span></button>
+    </div>
+
+    <div class="dial-wrap">
+      <button class="dial" id="dialBtn" aria-label="时钟模式">
+        <svg class="dial-svg" viewBox="0 0 252 252">
+          <circle class="dial-track" cx="126" cy="126" r="124.5"/>
+          <circle class="dial-progress" id="ring" cx="126" cy="126" r="124.5"/>
+        </svg>
+        <div class="dial-center">
+          <span class="dial-time" id="time">25:00</span>
+          <span class="dial-state" id="dialState">准备</span>
+          <div class="dial-picker" id="dialPicker"></div>
+        </div>
+      </button>
+    </div>
+
+    <!-- 禅意模式专用：这一段从什么时候开始 -->
+    <div class="start-row" id="startRow"><span id="startLabel">始于 09:39</span></div>
+
+    <div class="rounds">
+      <div class="round-dots" id="roundDots"></div>
+      <span class="rounds-label" id="roundsLabel">—</span>
+    </div>
+
+    <div class="controls">
+      <button class="ctrl" id="btnReset" aria-label="重置"><svg class="i"><use href="#i-reset"/></svg></button>
+      <button class="ctrl-main" id="btnToggle" aria-label="开始或暂停">
+        <svg class="i i-solid ic-play"><use href="#i-play"/></svg>
+        <svg class="i i-solid ic-pause"><use href="#i-pause"/></svg>
+      </button>
+      <button class="ctrl" id="btnSkip" aria-label="跳过"><svg class="i i-solid"><use href="#i-skip"/></svg></button>
+    </div>
+
+    <button class="zen-line" id="zenLine">此刻，只做一件事</button>
+  </section>
+
+  <!-- ══════════ 统计 ══════════ -->
+  <section class="screen" id="s-stats" data-screen>
+    <header class="head">
+      <span class="head-spacer"></span>
+      <div class="head-center">
+        <p class="head-date" id="statsRange">—</p>
+        <h1 class="head-title" data-i18n="titleStats">统计</h1>
+      </div>
+      <button class="icon-btn" data-go="settings" aria-label="设置">
+        <svg class="i"><use href="#i-settings"/></svg>
+      </button>
+    </header>
+
+    <div class="hero">
+      <span class="hero-value" id="weekTotal">—</span>
+      <span class="hero-label" data-i18n="weekLabel">本周专注时长</span>
+    </div>
+
+    <div class="chart" id="chart"></div>
+
+    <div class="metrics-wrap">
+      <div class="sep"></div>
+      <div class="metrics" id="metrics"></div>
+      <p class="stat-note" id="statNote"></p>
+    </div>
+  </section>
+
+  <!-- ══════════ 设置 ══════════ -->
+  <section class="screen" id="s-settings" data-screen>
+    <header class="head">
+      <button class="icon-btn" data-go="timer" aria-label="返回"><svg class="i"><use href="#i-back"/></svg></button>
+      <div class="head-center grow"><h1 class="head-title" data-i18n="titleSettings">设置</h1></div>
+      <span class="head-spacer"></span>
+    </header>
+
+    <div class="group">
+      <p class="group-head" data-i18n="gDuration">时长</p>
+      <div class="row">
+        <span class="row-label" data-i18n="focusDur">专注时长</span>
+        <div class="stepper">
+          <button class="step" data-step="focus" data-dir="-1" aria-label="减少"><svg class="i"><use href="#i-minus"/></svg></button>
+          <button class="value" data-val="focus" data-pick="focus">25 分钟</button>
+          <button class="step" data-step="focus" data-dir="1" aria-label="增加"><svg class="i"><use href="#i-plus"/></svg></button>
+        </div>
+        <div class="presets" data-presets="focus"></div>
+      </div>
+      <div class="sep"></div>
+      <div class="row">
+        <span class="row-label" data-i18n="shortDur">短休息</span>
+        <div class="stepper">
+          <button class="step" data-step="short" data-dir="-1" aria-label="减少"><svg class="i"><use href="#i-minus"/></svg></button>
+          <button class="value" data-val="short" data-pick="short">5 分钟</button>
+          <button class="step" data-step="short" data-dir="1" aria-label="增加"><svg class="i"><use href="#i-plus"/></svg></button>
+        </div>
+        <div class="presets" data-presets="short"></div>
+      </div>
+      <div class="sep"></div>
+      <div class="row">
+        <span class="row-label" data-i18n="longDur">长休息</span>
+        <div class="stepper">
+          <button class="step" data-step="long" data-dir="-1" aria-label="减少"><svg class="i"><use href="#i-minus"/></svg></button>
+          <button class="value" data-val="long" data-pick="long">15 分钟</button>
+          <button class="step" data-step="long" data-dir="1" aria-label="增加"><svg class="i"><use href="#i-plus"/></svg></button>
+        </div>
+        <div class="presets" data-presets="long"></div>
+      </div>
+      <div class="sep"></div>
+      <div class="row">
+        <span class="row-label" data-i18n="roundsDur">长休息间隔</span>
+        <div class="stepper">
+          <button class="step" data-step="rounds" data-dir="-1" aria-label="减少"><svg class="i"><use href="#i-minus"/></svg></button>
+          <button class="value" data-val="rounds" data-pick="rounds">4 个</button>
+          <button class="step" data-step="rounds" data-dir="1" aria-label="增加"><svg class="i"><use href="#i-plus"/></svg></button>
+        </div>
+        <div class="presets" data-presets="rounds"></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <p class="group-head" data-i18n="gDisplay">显示</p>
+      <div class="row">
+        <span class="row-label" data-i18n="themeLabel">主题</span>
+        <div class="switch2" data-switch="theme">
+          <button data-v="light" data-i18n="light">浅色</button>
+          <span class="dotsep"></span>
+          <button data-v="dark" data-i18n="dark">深色</button>
+        </div>
+      </div>
+      <div class="sep"></div>
+      <div class="row">
+        <span class="row-label" data-i18n="langLabel">语言</span>
+        <div class="switch2" data-switch="lang">
+          <button data-v="zh">中文</button>
+          <span class="dotsep"></span>
+          <button data-v="en">English</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <p class="group-head" data-i18n="gBehavior">习惯</p>
+      <div class="row">
+        <span class="row-label" data-i18n="autoBreak">自动开始休息</span>
+        <button class="toggle" data-toggle="autoBreak" aria-label="自动开始休息"></button>
+      </div>
+      <div class="sep"></div>
+      <div class="row">
+        <span class="row-label" data-i18n="autoFocus">自动开始专注</span>
+        <button class="toggle" data-toggle="autoFocus" aria-label="自动开始专注"></button>
+      </div>
+      <div class="sep"></div>
+      <div class="row">
+        <span class="row-label" data-i18n="sound">提示音</span>
+        <span class="row-end">
+          <button class="link-btn" id="previewSound" data-i18n="preview">试听</button>
+          <button class="toggle" data-toggle="sound" aria-label="提示音"></button>
+        </span>
+      </div>
+      <div class="sep"></div>
+      <div class="row">
+        <span class="row-label" data-i18n="keepAwake">保持屏幕常亮</span>
+        <button class="toggle" data-toggle="keepAwake" aria-label="保持屏幕常亮"></button>
+      </div>
+    </div>
+
+    <div class="group">
+      <p class="group-head" data-i18n="gData">数据</p>
+      <div class="row">
+        <span class="row-label" data-i18n="syncHint">手机 · 电脑同步</span>
+        <span class="row-end">
+          <button class="link-btn" id="exportData" data-i18n="doExport">导出</button>
+          <button class="link-btn" id="importData" data-i18n="doImport">导入</button>
+        </span>
+      </div>
+      <p class="row-note" data-i18n="syncNote">导出的文件是全部设置与专注记录。在另一台设备上导入，即可合并两边的进度（时间与时长完全相同的记录只保留一条）。</p>
+      <div class="sep"></div>
+      <div class="row">
+        <span class="row-label" data-i18n="demoData">填充演示数据</span>
+        <button class="link-btn" id="seedDemo" data-i18n="doFill">填充</button>
+      </div>
+      <div class="sep"></div>
+      <div class="row">
+        <span class="row-label" data-i18n="clearLog">清空所有记录</span>
+        <button class="link-btn is-danger" id="clearLog" data-i18n="doClear">清空</button>
+      </div>
+    </div>
+
+    <!-- 导入用的文件选择器：隐藏但可聚焦，供按钮 / 键盘触发 -->
+    <input type="file" id="importFile" accept="application/json,.json" class="visually-hidden" tabindex="-1">
+
+    <div class="group">
+      <p class="group-head" data-i18n="gAbout">关于</p>
+      <div class="row">
+        <span class="row-label" data-i18n="version">版本</span>
+        <span class="row-value">1.0.3</span>
+      </div>
+    </div>
+
+    <button class="reset-all" id="resetAll" data-i18n="resetAll">恢复默认设置</button>
+  </section>
+
+  <!-- ══════════ 时钟模式 ══════════ -->
+  <section class="screen clock" id="s-clock" data-screen>
+    <p class="clock-now" id="clockNow"><span id="clockHM">09:41</span><span class="clock-sec" id="clockSec">00</span></p>
+    <div class="dial">
+      <svg class="dial-svg" viewBox="0 0 252 252">
+        <circle class="dial-track" cx="126" cy="126" r="124.5"/>
+        <circle class="dial-progress" id="ringClock" cx="126" cy="126" r="124.5"/>
+      </svg>
+      <div class="dial-center">
+        <span class="dial-time" id="timeClock">25:00</span>
+        <span class="dial-state" id="dialStateClock">准备</span>
+      </div>
+    </div>
+  </section>
+
+  <nav class="nav" id="nav">
+    <button data-go="timer" class="is-active" data-i18n="navTimer">计时</button>
+    <button data-go="stats" data-i18n="navStats">统计</button>
+  </nav>
+</div>
+
+<!-- 完成一轮后的正向提示：不挡操作、自动淡出 -->
+<div class="toast" id="toast" aria-live="polite">
+  <span class="toast-main"></span>
+  <span class="toast-sub"></span>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
